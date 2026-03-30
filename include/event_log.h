@@ -62,7 +62,7 @@ struct chunk *alloc_chunk();
 void free_chunk(struct chunk *chunk);
 
 /*
- * Insert a new event into the partition log.
+ * Insert a new event into the partition log. (This algorithm assumes Single Writer!!!).
  * Arguments:
  *     struct partition_log *log - Insert into this partition log.
  *     event_t event - Insert this event.

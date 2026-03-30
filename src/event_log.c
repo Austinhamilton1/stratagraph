@@ -23,7 +23,7 @@ void free_chunk(struct chunk *chunk) {
 }
 
 /*
- * Insert a new event into the partition log.
+ * Insert a new event into the partition log. (This algorithm assumes Single Writer!!!)
  * Arguments:
  *     struct partition_log *log - Insert into this partition log.
  *     event_t event - Insert this event.
@@ -31,17 +31,19 @@ void free_chunk(struct chunk *chunk) {
  *     int - 0 on success, -1 on failure.
  */
 int insert_event(struct partition_log *log, event_t event) {
-    // Grab the tail and secure a write index
+    // Grab the tail and write index
     struct chunk *tail = log->tail;
-    unsigned int idx = atomic_fetch_add(&tail->write_idx, 1);
+    unsigned int idx = tail->write_idx;
 
     if(idx < CHUNK_SIZE) {
-        // Fast path, no need to allocate a new chunk
+        // Fast path, values left in chunk
         tail->events[idx] = event;
+        atomic_store_explicit(&tail->write_idx, idx + 1, memory_order_release);
     } else {
-        // Chunk full, must allocate a new chunk
+        // Slow path, new chunk must be created
         struct chunk *new_chunk = alloc_chunk();
+        new_chunk->events[0] = event;
         new_chunk->write_idx = 1;
-        
+        tail = new_chunk;
     }
 }
