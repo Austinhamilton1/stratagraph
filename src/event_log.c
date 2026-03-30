@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdatomic.h>
 
 #include "event_log.h"
 
@@ -30,5 +31,17 @@ void free_chunk(struct chunk *chunk) {
  *     int - 0 on success, -1 on failure.
  */
 int insert_event(struct partition_log *log, event_t event) {
+    // Grab the tail and secure a write index
     struct chunk *tail = log->tail;
+    unsigned int idx = atomic_fetch_add(&tail->write_idx, 1);
+
+    if(idx < CHUNK_SIZE) {
+        // Fast path, no need to allocate a new chunk
+        tail->events[idx] = event;
+    } else {
+        // Chunk full, must allocate a new chunk
+        struct chunk *new_chunk = alloc_chunk();
+        new_chunk->write_idx = 1;
+        
+    }
 }
