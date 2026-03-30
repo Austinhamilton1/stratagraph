@@ -1,2 +1,2 @@
 # StrataGraph
-StrataGraph: A Multi-Tier Temporal Graph Store with Bounded-Staleness Consistency”
+StrataGraph: A Multi-Tier Temporal Graph Store with Bounded-Staleness Consistency
