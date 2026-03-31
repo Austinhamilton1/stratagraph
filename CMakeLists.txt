@@ -23,6 +23,11 @@ target_sources(stratagraph
             include/snapshot_reader.h
 )
 
+target_link_libraries(stratagraph
+    PRIVATE
+        Threads::Threads
+)
+
 find_package(Threads REQUIRED)
 
 add_executable(benchmark_event_log)
