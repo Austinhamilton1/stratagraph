@@ -5,6 +5,7 @@
 #include <stdatomic.h>
 
 #define CHUNK_SIZE 1024
+#define MAX_THREADS 128
 
 /* Events can be one of several types. */
 enum event_type {
@@ -41,11 +42,17 @@ struct chunk {
     struct chunk    *next;                  // Linked list of chunks to accompany arbitrary events
 };
 
-/* Each partition maintains a list of events. */
-struct partition_log {
-    atomic_uintptr_t    head;   // New event chunks are added here
-    atomic_uintptr_t    tail;   // Old event chunks are read from here
-};
+/* Each thread maintains a list of events. */
+typedef struct {
+    struct chunk    *head;  // New event chunks are added here
+    struct chunk    *tail;  // Old event chunks are read from here
+} thread_log_t;
+
+/* Partition log with global registry. */
+typedef struct {
+    thread_log_t    *thread_logs[MAX_THREADS];  // Logs associated with a thread
+    atomic_int      num_threads;                // Number of active threads
+} partition_log_t;
 
 /*
  * Allocate a new chunk on the heap.
@@ -62,13 +69,36 @@ struct chunk *alloc_chunk();
 void free_chunk(struct chunk *chunk);
 
 /*
- * Insert a new event into the partition log. (This algorithm assumes Single Writer!!!).
+ * Initialize a partition log.
  * Arguments:
- *     struct partition_log *log - Insert into this partition log.
+ *     partition_log_t *log - Initialize this log.
+ */
+void init_partition_log(partition_log_t *log);
+
+/*
+ * Free data associated with a partition log.
+ * Arguments:
+ *     partition_log_t *log - Free this log.
+ */
+void free_partition_log(partition_log_t *log);
+
+/*
+ * Returns a pointer to the per-thread log for this thread.
+ * Arguments:
+ *     partition_log_t *log - Log to register with.
+ * Returns:
+ *     thread_log_t * - New thread log.
+ */
+thread_log_t *register_thread_log(partition_log_t *log);
+
+/*
+ * Insert a new event into a thread log.
+ * Arguments:
+ *     thread_log_t *log - Insert into this partition log.
  *     event_t event - Insert this event.
  * Returns:
  *     int - 0 on success, -1 on failure.
  */
-int insert_event(struct partition_log *log, event_t event);
+int insert_event(thread_log_t *tlog, event_t event);
 
 #endif
