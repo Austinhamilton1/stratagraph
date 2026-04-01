@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-#include "event_log.h"
+#include "l1.h"
 #include "snapshot_reader.h"
 
 #define NS_PER_SEC 1000000000.0
@@ -11,7 +11,7 @@
 struct event_arg {
     event_t         *start;
     event_t         *end;
-    partition_log_t *plog;
+    l1_partition_t  *plog;
 };
 
 void *add_event(void *ptr) {
@@ -38,8 +38,8 @@ int main(int argc, char **argv) {
     struct timespec start, end;
     double elapsed_time;
 
-    partition_log_t plog;
-    init_partition_log(&plog);
+    l1_partition_t plog;
+    init_l1_partition(&plog);
 
     int num_events = atoi(argv[1]);
     int num_threads = atoi(argv[2]);
@@ -49,7 +49,7 @@ int main(int argc, char **argv) {
     struct event_arg args[num_threads];
 
     for(int i = 0; i < num_events; i++) {
-        events[i] = (event_t){.type=NODE_ADD, .time=i, .node={.u=i}};
+        events[i] = (event_t){.type=NODE_ADD, .time=i, .node=i};
     }
 
     for(int i = 0; i < num_threads; i++) {
@@ -80,7 +80,7 @@ int main(int argc, char **argv) {
 
     merge_logs(&reader, process_event);
 
-    free_partition_log(&plog);
+    free_l1_partition(&plog);
 
     printf("Event Log Benchmark Results:\n");
     printf("----------------------------\n");

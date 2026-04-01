@@ -4,9 +4,9 @@
  * Initialize reader for a partition log.
  * Arguments:
  *     snapshot_reader_t *reader - Initialize this reader.
- *     partition_log_t *plog - Initialize the reader on this partition log.
+ *     l1_partition_t *plog - Initialize the reader on this partition log.
  */
-void init_snapshot_reader(snapshot_reader_t *reader, partition_log_t *plog) {
+void init_snapshot_reader(snapshot_reader_t *reader, l1_partition_t *plog) {
     reader->plog = plog;
     int nthreads = atomic_load(&plog->num_threads);
     for(int t = 0; t < nthreads; t++) {
@@ -22,7 +22,7 @@ void init_snapshot_reader(snapshot_reader_t *reader, partition_log_t *plog) {
  *     void (*process_event)(event_t *) - Function pointer to do to each event.
  */
 void merge_logs(snapshot_reader_t *reader, void (*process_event)(event_t *)) {
-    partition_log_t *plog = reader->plog;
+    l1_partition_t *plog = reader->plog;
     int nthreads = atomic_load(&plog->num_threads);
 
     for(int t = 0; t < nthreads; t++) {
@@ -33,9 +33,10 @@ void merge_logs(snapshot_reader_t *reader, void (*process_event)(event_t *)) {
         // Get the last read chunk and index
         struct chunk *chunk = reader->last_chunk[t];
         unsigned int start_idx = reader->last_chunk_idx[t];
+        unsigned int max_idx = start_idx;
 
         while(chunk) {
-            unsigned int max_idx = atomic_load_explicit(&chunk->write_idx, memory_order_acquire); // Snapshot of committed events
+            max_idx = atomic_load_explicit(&chunk->write_idx, memory_order_acquire); // Snapshot of committed events
             
             // Process unread events 
             for(unsigned int i = start_idx; i < max_idx; i++) {
@@ -46,9 +47,9 @@ void merge_logs(snapshot_reader_t *reader, void (*process_event)(event_t *)) {
             chunk = chunk->next;
             start_idx = 0; // After first chunk, restart index back at 0
         }
-
-        // Update last read chunk and index
-        reader->last_chunk[t] = tlog->tail;
-        reader->last_chunk_idx[t] = atomic_load_explicit(&tlog->tail->write_idx, memory_order_acquire);
+        
+        // Save cached reader metadata
+        reader->last_chunk[t] = chunk;
+        reader->last_chunk_idx[t] = max_idx;
     }
 }

@@ -1,8 +1,9 @@
-#ifndef EVENT_LOG_H
-#define EVENT_LOG_H
+#ifndef L1_H
+#define L1_H
 
 #include <stdint.h>
 #include <stdatomic.h>
+#include <stddef.h>
 
 #define CHUNK_SIZE 1024
 #define MAX_THREADS 128
@@ -21,15 +22,13 @@ enum event_type {
 typedef struct {
     enum event_type     type;       // Type of event
     uint64_t            time;       // Time stamp of the event
+    void                *payload;   // Update payload (only for updates)
+    size_t              size;       // Size of update payload
     union {
+        uint32_t        node;       // Node involved in event
         struct {
-            uint64_t    u;          // Node being affected
-            void        *payload;   // Node update payload
-        } node;
-        struct {
-            uint64_t    src;        // Source node
-            uint64_t    dest;       // Destination node
-            void        *payload;   // Edge update payload
+            uint32_t    src;        // Source node
+            uint32_t    dest;       // Destination node
         } edge;
     };
     
@@ -52,7 +51,7 @@ typedef struct {
 typedef struct {
     thread_log_t    *thread_logs[MAX_THREADS];  // Logs associated with a thread
     atomic_int      num_threads;                // Number of active threads
-} partition_log_t;
+} l1_partition_t;
 
 /*
  * Allocate a new chunk on the heap.
@@ -71,25 +70,25 @@ void free_chunk(struct chunk *chunk);
 /*
  * Initialize a partition log.
  * Arguments:
- *     partition_log_t *log - Initialize this log.
+ *     l1_partition_t *log - Initialize this log.
  */
-void init_partition_log(partition_log_t *log);
+void init_l1_partition(l1_partition_t *log);
 
 /*
  * Free data associated with a partition log.
  * Arguments:
- *     partition_log_t *log - Free this log.
+ *     l1_partition_t *log - Free this log.
  */
-void free_partition_log(partition_log_t *log);
+void free_l1_partition(l1_partition_t *log);
 
 /*
  * Returns a pointer to the per-thread log for this thread.
  * Arguments:
- *     partition_log_t *log - Log to register with.
+ *     l1_partition_t *log - Log to register with.
  * Returns:
  *     thread_log_t * - New thread log.
  */
-thread_log_t *register_thread_log(partition_log_t *log);
+thread_log_t *register_thread_log(l1_partition_t *log);
 
 /*
  * Insert a new event into a thread log.

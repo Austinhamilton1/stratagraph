@@ -11,7 +11,7 @@ add_library(stratagraph)
 
 target_sources(stratagraph
     PRIVATE
-        src/event_log.c
+        src/l1.c
         src/snapshot_reader.c
 
     PUBLIC
@@ -19,7 +19,7 @@ target_sources(stratagraph
         BASE_DIRS
             include
         FILES
-            include/event_log.h
+            include/l1.h
             include/snapshot_reader.h
 )
 
@@ -30,14 +30,14 @@ target_link_libraries(stratagraph
 
 find_package(Threads REQUIRED)
 
-add_executable(benchmark_event_log)
+add_executable(benchmark_l1)
 
-target_sources(benchmark_event_log
+target_sources(benchmark_l1
     PRIVATE
-        benchmarks/event_log_bench.c
+        benchmarks/l1_bench.c
 )
 
-target_link_libraries(benchmark_event_log
+target_link_libraries(benchmark_l1
     PRIVATE
         stratagraph
         Threads::Threads

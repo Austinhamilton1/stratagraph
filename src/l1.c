@@ -4,7 +4,7 @@
 #include <sched.h>
 #include <pthread.h>
 
-#include "event_log.h"
+#include "l1.h"
 
 /*
  * Allocate a new chunk on the heap.
@@ -12,9 +12,7 @@
  *     struct chunk * - Newly allocated chunk.
  */
 struct chunk *alloc_chunk() {
-    struct chunk *chunk = malloc(sizeof(struct chunk));
-    if(chunk)
-        memset(chunk, 0, sizeof(*chunk));
+    struct chunk *chunk = calloc(1, sizeof(struct chunk));
     return chunk;
 }
 
@@ -30,9 +28,9 @@ void free_chunk(struct chunk *chunk) {
 /*
  * Initialize a partition log.
  * Arguments:
- *     partition_log_t *log - Initialize this log.
+ *     l1_partition_t *log - Initialize this log.
  */
-void init_partition_log(partition_log_t *log) {
+void init_l1_partition(l1_partition_t *log) {
     memset(log, 0, sizeof(*log));
     atomic_store(&log->num_threads, 0);
 }
@@ -40,9 +38,9 @@ void init_partition_log(partition_log_t *log) {
 /*
  * Free data associated with a partition log.
  * Arguments:
- *     partition_log_t *log - Free this log.
+ *     l1_partition_t *log - Free this log.
  */
-void free_partition_log(partition_log_t *log) {
+void free_l1_partition(l1_partition_t *log) {
     int n = atomic_load(&log->num_threads);
     for(int i = 0; i < n; i++) {
         thread_log_t *tlog = log->thread_logs[i];
@@ -63,11 +61,11 @@ __thread thread_log_t *tls_log = NULL;
 /*
  * Returns a pointer to the per-thread log for this thread.
  * Arguments:
- *     partition_log_t *log - Log to register with.
+ *     l1_partition_t *log - Log to register with.
  * Returns:
  *     thread_log_t * - New thread log.
  */
-thread_log_t *register_thread_log(partition_log_t *log) {
+thread_log_t *register_thread_log(l1_partition_t *log) {
     if(tls_log) return tls_log; // Already registered
 
     // Allocate a new thread log
