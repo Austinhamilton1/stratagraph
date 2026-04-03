@@ -1,9 +1,10 @@
 #include <stdlib.h>
+#include <string.h>
 
 #include "l2.h"
 
-#define ENTITY_NODE 0
-#define ENTITY_EDGE 1
+#define ENTITY_EDGE 0
+#define ENTITY_NODE 1
 
 /*
  * Initialize a partition.
@@ -81,14 +82,61 @@ static int same_entity(event_t *a, event_t *b) {
 /*
  * Semantically reduce a series of events that occur over the same entity.
  * Arguments:
- *     event_t *start - Start in a group of events to reduce.
+ *     event_t *group - Start in a group of events to reduce.
  *     size_t len - Number of events to reduce.
  *     event_t *out - Reduce to this event.
  * Returns:
  *     int - 1 if the edge was reduced, 0 otherwise.
  */
-static int reduced_events(event_t *start, size_t len, event_t *out) {
+static int reduced_events(event_t *group, size_t len, event_t *out) {
+    event_t *last_state_change = NULL;
+    event_t *last_update = NULL;
 
+    for(size_t i = 0; i < len; i++) {
+        switch(group[i].type) {
+        case NODE_ADD:
+        case EDGE_LINK:
+        case NODE_DELETE:
+        case EDGE_UNLINK:
+            last_state_change = &group[i];
+            break;
+        case NODE_UPDATE:
+        case EDGE_UPDATE:
+            last_update = &group[i];
+            break;
+        }
+    }
+
+    // No structural changes
+    if(!last_state_change && !last_update)
+        return 0;
+
+    if(!last_state_change && last_update) {
+        *out = *last_update;
+        out->payload = malloc(last_update->size);
+        memcpy(out->payload, last_update->payload, last_update->size);
+        out->size = last_update->size;
+        return 1;
+    }
+
+    // if the last op is DELETE, no need to keep update
+    if(last_state_change->type == NODE_DELETE ||
+        last_state_change->type == EDGE_UNLINK) {
+        *out = *last_state_change;
+        return 1; 
+    }
+    
+    // ADD/LINK, may need to keep last update as well
+    *out = *last_state_change;
+
+    // Attach update if it is newer
+    if(last_update && last_update->time >= out->time) {
+        out->payload = malloc(last_update->size);
+        memcpy(out->payload, last_update->payload, last_update->size);
+        out->size = last_update->size;
+    }
+
+    return 1;
 }
 
 /*
